@@ -2,7 +2,7 @@ name : Amazon Product Extract Using PAAPI
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # runs every 5 minutes to check.
+    - cron: '15 2 * * *' # runs everyday at 15 past 4 A:M
   workflow_dispatch:
   repository_dispatch:
 
@@ -40,7 +40,7 @@ jobs:
           AMAZON_ACCESS_KEY: ${{ secrets.AMAZON_ACCESS_KEY }}
           AMAZON_SECRET_KEY: ${{ secrets.AMAZON_SECRET_KEY }}
           AMAZON_PARTNER_TAG: ${{ secrets.AMAZON_PARTNER_TAG }}
-        run: uv run search_items.py
+        run: uv run main.py
 
       # 6. Commit and push the changes (If CSV Updated)
       - name: Commit and push changes
