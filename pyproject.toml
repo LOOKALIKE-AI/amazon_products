@@ -1,0 +1,10 @@
+[project]
+name = "amazon-products"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "load-dotenv>=0.1.0",
+    "python-amazon-paapi>=5.0.1",
+]
