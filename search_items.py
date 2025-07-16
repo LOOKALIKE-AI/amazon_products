@@ -60,11 +60,11 @@ def get_products_from_children(child_node_ids, search_index="Beauty"):
 
     for node_id in child_node_ids:
         try:
-            for page in range(1, 2):  
+            for page in range(1, 11):  
                 results = amazon_client.search_items(
                     browse_node_id=node_id,
                     search_index=search_index,
-                    item_count=1,
+                    item_count=10,
                     item_page=page
                 )
 
