@@ -35,7 +35,7 @@ def extract_amazon_product_fields(item):
         "description": (item.get("item_info") or {}).get("title", {}).get("display_value", []),
     }
 
-def get_products_and_write(node_ids, filename="products.csv"):
+def get_products_and_write(node_ids, filename="beauty_products.csv"):
     first_row = True
     with open(filename, mode="w", encoding="utf-8", newline='') as f:
         writer = None
