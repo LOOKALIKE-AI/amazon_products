@@ -1,7 +1,7 @@
-import search_items
+import products
 
 def main():
-    search_items.main()
+    products.main()
 
 if __name__ == "__main__":
     main()
