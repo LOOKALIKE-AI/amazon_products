@@ -10,7 +10,7 @@ def get_node_ids(file_path):
     node_ids = filtered_data['Node ID'].astype(str).tolist()
     return node_ids
 
-file_path = "data/it.eu_browse_tree_mappings._TTH_.xls"
+file_path = "./data/it.eu_browse_tree_mappings._TTH_.xls"
 # node_ids = get_node_ids(file_path)
 # print(node_ids)
 
