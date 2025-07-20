@@ -15,5 +15,3 @@ file_path = "data/it.eu_browse_tree_mappings._TTH_.xls"
 # print(node_ids)
 
 
-if __name__ == "__main__":
-    get_node_ids(file_path=file_path)
