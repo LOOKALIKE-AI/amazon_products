@@ -4,7 +4,6 @@ on:
   schedule:
     - cron: '15 2 * * *' # runs everyday at 15 past 4 A:M
   workflow_dispatch:
-  repository_dispatch:
 
 jobs:
   extract-product:
@@ -48,7 +47,7 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add beauty_products.csv
-          git commit -m "chore: update CSV from schedule run" || echo "No changes to commit"
+          git commit -m "chore(data): refresh product catalog using GitHub Actions" || echo "No changes to commit"
           git push
  
 

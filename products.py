@@ -3,6 +3,7 @@ from amazon_paapi import AmazonApi
 from dotenv import load_dotenv
 import pandas as pd
 import csv
+import time
 
 # Load .env environment variables
 load_dotenv()
@@ -55,8 +56,8 @@ class GetProducts:
         return filtered_data['Node ID'].astype(str).tolist()
 
     @staticmethod
-    def get_key_words(file_path: str) -> list:
-        """Read keywords from Excel Node Paths and filter unwanted roots."""
+    def get_searchindex(file_path: str) -> list:
+        """Read searchindex from Excel Node Paths and filter unwanted roots."""
         data = pd.read_excel(file_path, sheet_name=1, usecols=['Node root', 'Node Path'])
         unwanted_node_roots = {
             'it-automotive', 'it-computers', 'it-electronics', 'it-grocery',
@@ -66,68 +67,75 @@ class GetProducts:
         node_paths = filtered_data['Node Path'].astype(str).tolist()
         return [path.split("/")[-1] for path in node_paths]
 
-    def search_items(self, node_ids=None, keywords=None, pages=10, csv_name="beauty_products.csv"):
-        """
-        Search items by node_ids and/or keywords, save to CSV, and return list of dicts in CSV file.
-        """
+    def search_items(self, node_ids=None, searchindex=None, pages=10, csv_name="beauty_products.csv"):
+        """Search items by node IDs and/or searchindex, save to CSV, and count products saved."""
         writer = None
-        all_results = []
+        product_count = 0
 
         with open(csv_name, mode='w', encoding='utf-8', newline='') as f:
-            try:
-                # Search by node IDs
-                if node_ids:
-                    for node_id in node_ids:
-                        for page in range(1, pages + 1):
-                            results_node = self.amazon_client.search_items(
-                                browse_node_id=node_id,
-                                item_count=10,
-                                item_page=page
-                            )
-                            for item in results_node.items:
-                                product_data = self.extract_required_fields(item.to_dict())
-                                if product_data:
-                                    if writer is None:
-                                        writer = csv.DictWriter(f, fieldnames=product_data.keys())
-                                        writer.writeheader()
-                                    writer.writerow(product_data)
-                                all_results.append(product_data)
+            for node_id in node_ids or []:
+                for page in range(1, pages + 1):
+                    try:
+                        results_node = self.amazon_client.search_items(
+                            browse_node_id=node_id,
+                            item_count=10,
+                            item_page=page
+                        )
+                        if not results_node or not getattr(results_node, 'items', None):
+                            print(f"[!] No items for Node ID: {node_id}, Page: {page}")
+                            continue
 
-                # Search by keywords
-                if keywords:
-                    for kw in keywords:
-                        for page in range(1, pages + 1):
-                            results_kw = self.amazon_client.search_items(
-                                keywords=kw,
-                                item_count=10,
-                                item_page=page
-                            )
-                            for item in results_kw.items:
-                                product_data = self.extract_required_fields(item.to_dict())
-                                if product_data:
-                                    if writer is None:
-                                        writer = csv.DictWriter(f, fieldnames=product_data.keys())
-                                        writer.writeheader()
-                                    writer.writerow(product_data)
-                                    all_results.append(product_data)
+                        for item in results_node.items:
+                            product_data = self.extract_required_fields(item.to_dict())
+                            if product_data:
+                                if writer is None:
+                                    writer = csv.DictWriter(f, fieldnames=product_data.keys())
+                                    writer.writeheader()
+                                writer.writerow(product_data)
+                                product_count += 1
 
-            except Exception as e:
-                print(f"Error during search: {e}")
+                        time.sleep(1)
 
-        return all_results
+                    except Exception as e:
+                        print(f"[x] Error Node ID {node_id}, Page {page}: {e}")
+
+            for si in searchindex or []:
+                for page in range(1, pages + 1):
+                    try:
+                        results_si = self.amazon_client.search_items(
+                            searchindex=si,
+                            item_count=10,
+                            item_page=page
+                        )
+                        if not results_si or not getattr(results_si, 'items', None):
+                            print(f"[!] No items for keyword: '{si}', Page: {page}")
+                            continue
+
+                        for item in results_si.items:
+                            product_data = self.extract_required_fields(item.to_dict())
+                            if product_data:
+                                if writer is None:
+                                    writer = csv.DictWriter(f, fieldnames=product_data.keys())
+                                    writer.writeheader()
+                                writer.writerow(product_data)
+                                product_count += 1
+
+                        time.sleep(1)
+
+                    except Exception as e:
+                        print(f"[x] Error keyword '{si}', Page {page}: {e}")
+
+        return product_count
 
 def main():
     gp = GetProducts()
     file_path = "./data/it.eu_browse_tree_mappings._TTH_.xls"
 
-    # Get node IDs and keywords
+    # Get node IDs and searchindex
     node_ids = gp.get_node_ids(file_path)
-    keywords = gp.get_key_words(file_path)
+    searchindex = gp.get_searchindex(file_path)
 
-    # # For testing, limit to first 2
-    # node_ids = node_ids[:1]
-    # keywords = keywords[:1]
 
     # Run search
-    results = gp.search_items(node_ids=node_ids, keywords=keywords)
-    print(f"Successfully saved {len(results)} products for all the node ids and products.")
+    total_saved = gp.search_items(node_ids=node_ids, searchindex=searchindex)
+    print(f"Successfully saved {total_saved} products for all the node ids and products.")
