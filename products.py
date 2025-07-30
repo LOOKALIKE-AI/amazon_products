@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import pandas as pd
 import csv
 import time
+import requests
 
 # Load .env environment variables
 load_dotenv()
@@ -16,7 +17,7 @@ class GetProducts:
             secret=os.environ.get("AMAZON_SECRET_KEY"),
             country="IT",
             tag=os.environ.get("AMAZON_PARTNER_TAG"),
-            throttling=2
+            throttling=1
         )
 
     def extract_required_fields(self, item: dict) -> dict:
@@ -55,19 +56,19 @@ class GetProducts:
         filtered_data = data[~data['Node root'].isin(unwanted_node_roots)]
         return filtered_data['Node ID'].astype(str).tolist()
 
-    @staticmethod
-    def get_searchindex(file_path: str) -> list:
-        """Read searchindex from Excel Node Paths and filter unwanted roots."""
-        data = pd.read_excel(file_path, sheet_name=1, usecols=['Node root', 'Node Path'])
-        unwanted_node_roots = {
-            'it-automotive', 'it-computers', 'it-electronics', 'it-grocery',
-            'it-industrial', 'it-lighting', 'it-musical-instruments', 'it-tools', 'it-toys'
-        }
-        filtered_data = data[~data['Node root'].isin(unwanted_node_roots)]
-        node_paths = filtered_data['Node Path'].astype(str).tolist()
-        return [path.split("/")[-1] for path in node_paths]
+    # @staticmethod
+    # def get_searchindex(file_path: str) -> list:
+    #     """Read searchindex from Excel Node Paths and filter unwanted roots."""
+    #     data = pd.read_excel(file_path, sheet_name=1, usecols=['Node root', 'Node Path'])
+    #     unwanted_node_roots = {
+    #         'it-automotive', 'it-computers', 'it-electronics', 'it-grocery',
+    #         'it-industrial', 'it-lighting', 'it-musical-instruments', 'it-tools', 'it-toys'
+    #     }
+    #     filtered_data = data[~data['Node root'].isin(unwanted_node_roots)]
+    #     node_paths = filtered_data['Node Path'].astype(str).tolist()
+    #     return [path.split("/")[-1] for path in node_paths]
 
-    def search_items(self, node_ids=None, searchindex=None, pages=10, csv_name="beauty_products.csv"):
+    def search_items(self, node_ids=None, pages=10, csv_name="beauty_products.csv"):
         """Search items by node IDs and/or searchindex, save to CSV, and count products saved."""
         writer = None
         product_count = 0
@@ -94,36 +95,49 @@ class GetProducts:
                                 writer.writerow(product_data)
                                 product_count += 1
 
-                        time.sleep(1)
+                        time.sleep(1)  
 
-                    except Exception as e:
-                        print(f"[x] Error Node ID {node_id}, Page {page}: {e}")
 
-            for si in searchindex or []:
-                for page in range(1, pages + 1):
-                    try:
-                        results_si = self.amazon_client.search_items(
-                            searchindex=si,
-                            item_count=10,
-                            item_page=page
-                        )
-                        if not results_si or not getattr(results_si, 'items', None):
-                            print(f"[!] No items for keyword: '{si}', Page: {page}")
+                    except requests.exceptions.HTTPError as http_err:
+                        if http_err.response.status_code == 429:
+                            print("Rate limit reached, stopping early.")
+                            break
+                        elif http_err.response.status_code == 500:
+                            print(f"Internal server error (500) for category {node_id}, skipping.")
+                            continue  
+                        else:
+                            print(f"HTTP error {http_err.response.status_code} for category {node_id}, skipping.")
                             continue
 
-                        for item in results_si.items:
-                            product_data = self.extract_required_fields(item.to_dict())
-                            if product_data:
-                                if writer is None:
-                                    writer = csv.DictWriter(f, fieldnames=product_data.keys())
-                                    writer.writeheader()
-                                writer.writerow(product_data)
-                                product_count += 1
-
-                        time.sleep(1)
-
                     except Exception as e:
-                        print(f"[x] Error keyword '{si}', Page {page}: {e}")
+                        print(f"Error fetching items for category {node_id}: {e}")
+                        continue
+
+            # for si in searchindex or []:
+            #     for page in range(1, pages + 1):
+            #         try:
+            #             results_si = self.amazon_client.search_items(
+            #                 searchindex=si,
+            #                 item_count=10,
+            #                 item_page=page
+            #             )
+            #             if not results_si or not getattr(results_si, 'items', None):
+            #                 print(f"[!] No items for keyword: '{si}', Page: {page}")
+            #                 continue
+
+            #             for item in results_si.items:
+            #                 product_data = self.extract_required_fields(item.to_dict())
+            #                 if product_data:
+            #                     if writer is None:
+            #                         writer = csv.DictWriter(f, fieldnames=product_data.keys())
+            #                         writer.writeheader()
+            #                     writer.writerow(product_data)
+            #                     product_count += 1
+
+            #             time.sleep(1)
+
+            #         except Exception as e:
+            #             print(f"[x] Error keyword '{si}', Page {page}: {e}")
 
         return product_count
 
@@ -133,9 +147,8 @@ def main():
 
     # Get node IDs and searchindex
     node_ids = gp.get_node_ids(file_path)
-    searchindex = gp.get_searchindex(file_path)
-
+    # searchindex = gp.get_searchindex(file_path)
 
     # Run search
-    total_saved = gp.search_items(node_ids=node_ids, searchindex=searchindex)
+    total_saved = gp.search_items(node_ids=node_ids)
     print(f"Successfully saved {total_saved} products for all the node ids and products.")
