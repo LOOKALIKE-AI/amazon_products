@@ -56,7 +56,7 @@ class GetProducts:
         filtered_data = data[~data['Node root'].isin(unwanted_node_roots)]
         return filtered_data['Node ID'].astype(str).tolist()
 
-    def search_items(self, node_ids=None, pages=10, csv_name="beauty_products.csv"):
+    def search_items(self, node_ids=None, csv_name="beauty_products.csv"):
         """Search items by node IDs and/or searchindex, save to CSV, and count products saved."""
         writer = None
         product_count = 0
@@ -82,8 +82,10 @@ class GetProducts:
                     time.sleep(1)  
 
                 except Exception as e:
-                    print(f"Error fetching items for category {node_id}: {e}")
-                    continue
+                    if any(keyword in str(e).lower() for keyword in ["requests limit reached", "throttling", "rate limit"]):
+                        print(f"[!] Rate limit hit on Node ID: {node_id}. Stopping script.")
+                        break
+
 
         return product_count
 
@@ -97,4 +99,4 @@ def main():
 
     # Run search
     total_saved = gp.search_items(node_ids=node_ids)
-    print(f"Successfully saved {total_saved} products for all the node ids and products.")
+    print(f"[INFO] Total products saved so far: {total_saved}")
