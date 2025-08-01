@@ -79,7 +79,7 @@ class GetProducts:
                             writer.writerow(product_data)
                             product_count += 1
 
-                    time.sleep(1)  
+                    time.sleep(2.3)  
 
                 except Exception as e:
                     if any(keyword in str(e).lower() for keyword in ["requests limit reached", "throttling", "rate limit"]):
@@ -96,6 +96,7 @@ def main():
     # Get node IDs and searchindex
     node_ids = gp.get_node_ids(file_path)
     node_ids = node_ids[:8500]
+    print(node_ids)
 
     # Run search
     total_saved = gp.search_items(node_ids=node_ids)
