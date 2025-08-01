@@ -96,7 +96,6 @@ def main():
     # Get node IDs and searchindex
     node_ids = gp.get_node_ids(file_path)
     node_ids = node_ids[:8500]
-    print(node_ids)
 
     # Run search
     total_saved = gp.search_items(node_ids=node_ids)
